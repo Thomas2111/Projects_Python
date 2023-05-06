@@ -1,0 +1,79 @@
+import discord
+import requests
+import os
+
+from bs4 import BeautifulSoup
+from discord.ext import tasks
+
+url = "https://www.bbc.com/weather/456172"
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+client = discord.Client(intents=intents)
+
+
+@client.event
+async def on_ready():
+    print(f'We have logged in as {client.user}')
+
+
+@client.event
+async def on_message(message):
+    msg = message.content
+    channel = client.get_channel(#ChannelID)
+
+    if message.author == client.user:
+        return
+
+
+    if message.content.startswith('$today'):
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        weatherinfo = soup.find(class_="wr-day__weather-type-description wr-js-day-content-weather-type-description wr-day__content__weather-type-description--opaque")
+        weathertemphigh = soup.find(class_="wr-day-temperature__high-value")
+        weathertemplow = soup.find(class_="wr-day-temperature__low-value")
+        await message.channel.send(weatherinfo.text + "\n" + weathertemphigh.text + " Highest today's temperature in (C°) and (F°)" + "\n" + weathertemplow.text + " Lowest today's temperature in (C°) and (F°)")
+
+
+    if message.content.startswith('$tomorrow'):
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, "html.parser")
+        weathertomorrowhigh = soup.find_all(class_="wr-day-temperature__high-value")
+        weathertomorrowlow = soup.find_all(class_="wr-day-temperature__low-value")
+        weatherinfotomorrow = soup.find_all(class_="wr-day__weather-type-description wr-js-day-content-weather-type-description wr-day__content__weather-type-description--opaque")
+        await message.channel.send(weatherinfotomorrow[1].text + "\n" + weathertomorrowhigh[1].text + " Highest tomorrow's temperature in (C°) and (F°)" + "\n" + weathertomorrowlow[1].text + " Lowest tomorrow's temperature in (C°) and (F°)")
+
+
+    if msg.startswith('$info'):
+            message_to_send = 'Auto update ON'
+            await channel.send(message_to_send)
+
+            myloop.start(message_to_send)
+
+
+    if msg.startswith ('$stop'):
+        message_to_send = 'Auto update OFF'
+        await channel.send(message_to_send)
+
+        myloop.stop()
+
+      
+    if message.content.startswith('$now'):
+      response = requests.get(url)
+      soup = BeautifulSoup(response.content, "html.parser")
+      weather_info = soup.find(class_="wr-day__weather-type-description wr-js-day-content-weather-type-description wr-day__content__weather-type-description--opaque")
+      weather_now = soup.find(class_="wr-value--temperature wr-temperature--time-slot")
+      await channel.send(weather_now.text + " " + weather_info.text)
+
+
+@tasks.loop(seconds=5)#presets to copy seconds=5/minutes=15/minutes=30/minutes=60
+async def myloop(weather_now):
+    channel = client.get_channel(#ChannelID)
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, "html.parser")
+    weather_info = soup.find(class_="wr-day__weather-type-description wr-js-day-content-weather-type-description wr-day__content__weather-type-description--opaque")
+    weather_now = soup.find(class_="wr-value--temperature wr-temperature--time-slot")
+    await channel.send(weather_now.text + " " + weather_info.text)
+
+client.run(os.getenv('TOKEN'))
